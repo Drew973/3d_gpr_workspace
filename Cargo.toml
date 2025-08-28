@@ -1,0 +1,3 @@
+[workspace]
+resolver = "3"
+members = [ "cli", "extractor_egui","shared", "viewer_slint"]

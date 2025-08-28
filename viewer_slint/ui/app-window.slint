@@ -1,0 +1,143 @@
+import { LineEdit, Button , VerticalBox , SpinBox , Slider , HorizontalBox } from "std-widgets.slint";
+
+
+export struct XYZ  {
+    x: int,
+    y: int,
+	z:int,
+}
+
+
+component LabelSpinboxMaximum{
+	in-out property<int> value <=> box.value;
+	in-out property<int> maximum <=> box.maximum;
+	in-out property<string> label <=> lab.text;
+
+	HorizontalBox {
+
+		lab := Text {vertical-alignment:center;}
+
+		box := SpinBox{}
+
+		label := Text {
+			text: "/" + maximum;
+			vertical-alignment:center;
+		}
+	}
+}
+
+
+component LabeledSpinbox{
+	in-out property<int> value <=> box.value;
+	in-out property<string> label <=> lab.text;
+	HorizontalBox {
+		lab := Text {vertical-alignment:center;}
+		box := SpinBox{}
+	}
+}
+
+
+
+
+
+export component AppWindow inherits Window {
+
+
+	in-out property<string> file:"no file open";
+
+	title: "3D GPR viewer:" + file;
+
+
+
+
+	in-out property<int> data_size_l: 0;
+	in-out property<int> data_size_t: 0;
+	in-out property<int> data_size_d: 0;
+
+	
+	callback longitudinal_position_changed(pos:int);
+	in-out property<int> longitudinal_position <=> l_box.value;
+	changed longitudinal_position => {longitudinal_position_changed(longitudinal_position);}
+	
+	callback transverse_position_changed(pos:int);
+	in-out property<int> transverse_position <=> t_box.value;
+	changed transverse_position => {transverse_position_changed(transverse_position);}
+	
+	callback depth_changed(zPos:int);
+	in-out property<int> depth <=> d_box.value;
+	changed depth => {depth_changed(depth);}	
+	
+	
+	callback select_file();
+
+	
+	
+	
+	MenuBar {
+        Menu {
+            title: "File";
+            MenuItem {
+                title: "Open...";
+                activated => {select_file();}
+            }
+		}
+		
+        Menu {
+            title: "Tools";
+            MenuItem {
+                title: "Export high amplitudes...";
+            }
+		}
+	}
+	
+	
+	
+	
+	
+	
+	//can't 2 way bind to struct(2025)
+	
+	
+	
+    VerticalBox {
+		alignment: start;
+
+		
+		/*popup := PopupWindow {
+        Rectangle { height:100%; width: 100%; background: yellow; }
+		Text{text:"no error";}
+		}
+		*/
+		
+		
+		Rectangle{
+			background: lightblue;
+			border-radius: 10px;
+			VerticalBox {		
+				Text{text: "Position(Traces):";}
+				
+				t_box:= LabelSpinboxMaximum{maximum: data_size_l ; label : "Transverse:";}
+				l_box:= LabelSpinboxMaximum{maximum: data_size_t ; label : "Longitudinal:";}
+				d_box:= LabelSpinboxMaximum{maximum: data_size_d ; label : "Depth:";}
+			}
+		}
+	
+		Rectangle{
+			background: lightblue;
+			border-radius: 10px;
+			VerticalBox {
+				Text{text: "Plot size (Traces):";}
+				
+
+				plot_size_t_box := LabeledSpinbox{label : "Transverse:" ; value : 25;}
+				plot_size_l_box := LabeledSpinbox{label : "Longitudinal:" ; value : 1000;}
+				plot_size_d_box := LabeledSpinbox{label : "Depth:" ; value : 255;}
+			}
+		}
+	
+	
+		Image {image-fit: fill;}
+    }
+	
+	
+}
