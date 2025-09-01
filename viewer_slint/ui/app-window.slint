@@ -1,4 +1,4 @@
-import { LineEdit, Button , VerticalBox , SpinBox , Slider , HorizontalBox } from "std-widgets.slint";
+import { LineEdit, Button , VerticalBox , SpinBox , Slider , HorizontalBox} from "std-widgets.slint";
 
 
 export struct XYZ  {
@@ -55,6 +55,10 @@ export component AppWindow inherits Window {
 	in-out property<int> data_size_d: 0;
 
 	
+	in-out property<int> transverse_pixels: 2000;
+	in-out property<int> transverse_lines: 500;
+
+	
 	callback longitudinal_position_changed(pos:int);
 	in-out property<int> longitudinal_position <=> l_box.value;
 	changed longitudinal_position => {longitudinal_position_changed(longitudinal_position);}
@@ -70,8 +74,8 @@ export component AppWindow inherits Window {
 	
 	callback select_file();
 
-	
-	
+	pure callback plot_transverse(longitudinal:int , transverse: int , transverse_size:int , depth: int ,depth_size:int , pixels:int , lines:int) -> image;
+
 	
 	MenuBar {
         Menu {
@@ -97,47 +101,80 @@ export component AppWindow inherits Window {
 	
 	//can't 2 way bind to struct(2025)
 	
+	GridLayout {
+        spacing: 5px;
 	
 	
-    VerticalBox {
-		alignment: start;
 
-		
-		/*popup := PopupWindow {
-        Rectangle { height:100%; width: 100%; background: yellow; }
-		Text{text:"no error";}
-		}
-		*/
-		
-		
 		Rectangle{
+			row:0;
+			col:0;
 			background: lightblue;
 			border-radius: 10px;
-			VerticalBox {		
-				Text{text: "Position(Traces):";}
-				
-				t_box:= LabelSpinboxMaximum{maximum: data_size_l ; label : "Transverse:";}
-				l_box:= LabelSpinboxMaximum{maximum: data_size_t ; label : "Longitudinal:";}
-				d_box:= LabelSpinboxMaximum{maximum: data_size_d ; label : "Depth:";}
-			}
+				Text{text: "Horizontal plot";}
+				Image {image-fit: fill;}
+			
 		}
-	
+		
 		Rectangle{
+			row:1;
+			col:0;
 			background: lightblue;
 			border-radius: 10px;
-			VerticalBox {
-				Text{text: "Plot size (Traces):";}
-				
-
-				plot_size_t_box := LabeledSpinbox{label : "Transverse:" ; value : 25;}
-				plot_size_l_box := LabeledSpinbox{label : "Longitudinal:" ; value : 1000;}
-				plot_size_d_box := LabeledSpinbox{label : "Depth:" ; value : 255;}
-			}
+				Text{text: "Longitudinal plot";}
+				Image {image-fit: fill;}
+			
 		}
 	
+		transverse_image := Image {
+			row: 2;
+			col:0;
+			image-fit: contain;
+			source: root.plot_transverse(longitudinal_position, transverse_position, plot_size_t_box.value, depth, plot_size_d_box.value,transverse_pixels,transverse_lines);
+			}
 	
-		Image {image-fit: fill;}
-    }
+	
+		VerticalBox {
+			row:0;
+			col:1;
+			
+			max-width:250px;
+			alignment: start;
+
+			
+			/*popup := PopupWindow {
+			Rectangle { height:100%; width: 100%; background: yellow; }
+			Text{text:"no error";}
+			}
+			*/
+			
+			
+			Rectangle{
+				background: lightblue;
+				border-radius: 10px;
+				VerticalBox {		
+					Text{text: "Position(Traces):";}
+					l_box:= LabelSpinboxMaximum{maximum: data_size_l -1 ; label : "Longitudinal:";}
+					t_box:= LabelSpinboxMaximum{maximum: data_size_t -1 ; label : "Transverse:";}
+					d_box:= LabelSpinboxMaximum{maximum: data_size_d -1 ; label : "Depth:";}
+				}
+			}
+		
+			Rectangle{
+				background: lightblue;
+				border-radius: 10px;
+				VerticalBox {
+					Text{text: "Plot size (Traces):";}
+					plot_size_t_box := LabeledSpinbox{label : "Transverse:" ; value : 25;}
+					plot_size_l_box := LabeledSpinbox{label : "Longitudinal:" ; value : 1000;}
+					plot_size_d_box := LabeledSpinbox{label : "Depth:" ; value : 255;}
+				}
+			}
+		
+
+			
+		}
+	}
 	
 	
 }

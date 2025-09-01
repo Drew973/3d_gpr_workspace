@@ -27,3 +27,39 @@ pub fn longitudinal_difference(a: Longitudinal, b: Longitudinal) -> Longitudinal
 		return b-a;
 	}
 }
+
+
+
+//absolute difference between a and b
+pub fn usize_dif(a : usize , b:usize) -> usize{
+	if a>b {
+		return a-b;
+		}
+	else{
+		return b-a;
+	}
+}
+
+//a-b or 0
+pub fn usize_subtract(a : usize , b:usize) -> usize{
+	if a>b {
+		return a-b;
+		}
+	else{
+		return 0;
+	}
+}
+
+
+
+pub fn clamp(value:usize, min:usize , max:usize) -> usize{
+	if value < min{
+		return min;
+	}
+	if value > max{
+		return max;
+	}
+	return value;
+}
+
+	

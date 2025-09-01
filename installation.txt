@@ -1,0 +1,8 @@
+
+
+
+copy and extract S:\Drew\3d_gpr_tools_read_only\windows11\extract_high_amplitudes.zip onto your PC.
+
+extract_high_amplitudes.exe is self contained.
+use like
+"where/you/put/extract_high_amplitudes.exe" --input "your/path/to/your_input.txt" --output "your/path/to/your_output.csv"

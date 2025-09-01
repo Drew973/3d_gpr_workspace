@@ -1,4 +1,4 @@
-use crate::core::Amplitude;
+use crate::core::{Amplitude,usize_dif,usize_subtract};
 use std::cmp::{min,max};
 /*
 clustering algorithm for voxels.
@@ -23,26 +23,6 @@ pub struct XYZV {
 }
 
 
-
-//absolute difference between a and b
-fn usize_dif(a : usize , b:usize) -> usize{
-	if a>b {
-		return a-b;
-		}
-	else{
-		return b-a;
-	}
-}
-
-//a-b or 0
-fn usize_subtract(a : usize , b:usize) -> usize{
-	if a>b {
-		return a-b;
-		}
-	else{
-		return 0;
-	}
-}
 
 
 

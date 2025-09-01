@@ -1,26 +1,18 @@
 
 //use std::io;
-
-use serde::{Serialize};
-
 //use std::cmp::min;
-
 //use anyhow::{Result,anyhow};
-use geo::{Polygon,MultiPoint,Point,ConvexHull,ConcaveHull};
+use geo::{Point};
 //use shapefile::{dbase,Polygon as ShapefilePolygon};
-use csv::Writer;
-use wkt::ToWkt;
 use std::error::Error;
-use std::collections::{HashSet,HashMap};
-
-use crate::trace::{Trace,XYZ,TraceParser};
-use crate::clustering::{Clusterer , Cluster};
+use crate::trace::{TraceParser};
+//use crate::clustering::{Clusterer , Cluster};
 use std::fmt;
-use std::cmp::min;
 use crate::core::Amplitude;
-use ndarray::{Array3, Array};
-
-
+use ndarray::{Array2, Array3, Array};
+use crate::plot::{PlotData};
+use std::cmp::min;
+use anyhow::{bail,Result};
 
 //const C:f64 = 299792458.0;//speed of light
 //const TIME_INTERVAL:f64 = 9.765625E-11;
@@ -57,6 +49,8 @@ impl element_iterator{
 
 
 #[allow(dead_code)]
+
+//#[derive(Clone)]
 pub struct AmplitudeData{
 	pub amplitudes: Array3<Option<Amplitude>>,
 	pub longitudinal_size: usize,
@@ -75,6 +69,49 @@ impl fmt::Debug for AmplitudeData {
 }
 
 impl AmplitudeData{
+	
+	//trans, trans_size, depth, depth_size
+	
+	//from transverse_interval
+	pub fn transverse_plot_data(&self, longitudinal:usize, transverse:usize, transverse_interval:usize, depth:usize, depth_interval:usize) -> Result<PlotData>{
+		
+		if self.transverse_size ==0 || self.longitudinal_size==0||self.depth_size == 0{
+			bail!("size = 0");
+		}
+		
+		if transverse_interval ==0 || depth_interval==0{
+			bail!("Interval of 0");
+		}
+		
+		
+		let min_depth = depth_interval * (depth/depth_interval);
+		let max_depth = min_depth + depth_interval;
+
+		let min_transverse = transverse_interval * (transverse/transverse_interval);
+		let max_transverse = min_transverse + transverse_interval;
+
+		let mut amplitudes: Array2<Option<Amplitude>> = Array::from_elem((1+max_transverse-min_transverse, 1+max_depth-min_depth), None);//single element has shape (1,1)
+		
+		for x in min_transverse..min(max_transverse, self.transverse_size){
+			for y in min_depth..min(max_depth,self.depth_size){
+				amplitudes[(x-min_transverse,y-min_depth)] = self.value(longitudinal,x,y);
+			}
+		}
+		
+		
+		return Ok(PlotData{
+		min_x_index: min_transverse,
+		min_y_index: min_depth,
+		marker_x: transverse,
+		marker_y: depth,
+		x_scale: 1.0, //meters per index
+		y_scale: 1.0, //meters per index
+		x_label: "Transverse".to_string(),
+		y_label: "Depth".to_string(),
+		amplitudes: amplitudes,  // row col
+		});
+	}
+	
 	
 	
 	fn set_value(&mut self, longitudinal:usize, transverse:usize, depth:usize, value:Option<Amplitude>){

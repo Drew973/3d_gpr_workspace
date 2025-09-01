@@ -4,6 +4,8 @@
 use plotters::prelude::*;
 use colorgrad::{Gradient,LinearGradient};
 use std::error::Error;
+use crate::core::Amplitude;
+use ndarray::{Array2, Array};
 
 
 
@@ -28,15 +30,17 @@ x and y refer to plot coordinates - not to coordinates within amplitude data
 */
 
 pub struct PlotData{
-	min_x_index: usize,
-	min_y_index: usize,
-	marker_x: usize,
-	marker_y: usize,
-	x_scale:f64, //meters per index
-	y_scale:f64, //meters per index
-	x_label: String,
-	y_label: String,
-	amplitudes: Vec<Vec<Option<i16>>>,  // row col
+	pub min_x_index: usize,
+	pub min_y_index: usize,
+	pub marker_x: usize,
+	pub marker_y: usize,
+	pub x_scale:f64, //meters per index
+	pub y_scale:f64, //meters per index
+	pub x_label: String,
+	pub y_label: String,
+//	pub amplitudes: Vec<Vec<Option<i16>>>,  // row of col
+	pub amplitudes: Array2<Option<Amplitude>>
+	
 }
 
 
@@ -51,11 +55,13 @@ const LINES: u32 = 768;
 
 impl PlotData{
 
-	fn plot(& self , file: &str) -> Result<(), Box<dyn Error>>{
+		
+		
+	fn plot(&self , file: &str) -> Result<(), Box<dyn Error>>{
 		let min_x_val = self.min_x_index as f64 * self.x_scale;
 		let min_y_val = self.min_y_index as f64 * self.y_scale;
-		let max_x_val = (self.min_x_index+self.amplitudes[0].len()) as f64 * self.x_scale;
-		let max_y_val = (self.min_y_index+self.amplitudes.len()) as f64 * self.y_scale;
+		let max_x_val = (self.min_x_index+self.amplitudes.shape()[0]) as f64 * self.x_scale;
+		let max_y_val = (self.min_y_index+self.amplitudes.shape()[1]) as f64 * self.y_scale;
 
 		let gradient = colorgrad::GradientBuilder::new()
 		.html_colors(&["red", "blue"])
@@ -84,6 +90,21 @@ impl PlotData{
 		
 		let mut rects: Vec<Rectangle<(f64, f64)>> = Vec::new();
 		
+		for (ind,a) in self.amplitudes.indexed_iter(){
+				if let Some(v) = a{
+					let c = gradient.at(*v as f32).to_rgba8();
+					let color = RGBColor(c[0] , c[1] , c[2]);
+					let x = ind.0;
+					let y = ind.1;
+					rects.push(
+						Rectangle::new([(min_x_val + self.x_scale * x as f64, min_y_val + self.y_scale * y as f64), (min_x_val + self.x_scale * (x+1) as f64, min_y_val + self.y_scale * (y+1) as f64)] ,
+						color.filled())
+					);
+				}
+		}
+		
+		/*
+		
 		for (y,row) in self.amplitudes.iter().enumerate(){
 			for (x,a) in row.iter().enumerate(){
 				if let Some(v) = a{
@@ -97,28 +118,14 @@ impl PlotData{
 				}
 			}
 		}
-		
+		*/
 		chart.draw_series(rects)?;
 		root_drawing_area.present()?;
 		return Ok(());
 			
 	}
-			
-			
-	//	.y_desc("Depth(m)")
-	//	.x_desc("Transverse(m)")			
-			
-			
-			
-		
-		
+	
 }
-
-
-
-
-
-
 
 
 

@@ -7,6 +7,8 @@ edition = "2024"
 shared = { path = "../shared" }
 slint = "1.8.0"
 rfd = "0.15.4"
+plotters = "0.3.7"
+colorgrad = "0.7.2"
 [build-dependencies]
 slint-build = "1.8.0"
 
