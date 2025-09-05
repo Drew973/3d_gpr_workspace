@@ -936,18 +936,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "geo",
- "serde",
- "serde_json",
- "shared",
-]
-
-[[package]]
 name = "clipboard-win"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1779,6 +1767,18 @@ dependencies = [
  "rayon-core",
  "smallvec",
  "zune-inflate",
+]
+
+[[package]]
+name = "extract_high_amplitudes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "geo",
+ "serde",
+ "serde_json",
+ "shared",
 ]
 
 [[package]]
@@ -4927,7 +4927,6 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clap",
  "colorgrad",
  "csv",
  "geo",

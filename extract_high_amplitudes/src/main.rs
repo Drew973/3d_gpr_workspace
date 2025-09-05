@@ -79,6 +79,8 @@ struct Args {
 	#[arg(long, short, action)]
 	pause: bool,
 	
+	#[arg(long, short, action)]
+	overwrite: bool,
 	
 	#[arg(long, default_value_t = String::from("[{\"min_depth\":51,\"max_depth\":53,\"label\":\"0-50mm\"},
 	{\"min_depth\":54,\"max_depth\":57,\"label\":\"50-100mm\"},
@@ -111,8 +113,8 @@ impl Args{
 		let mut clusterer = Clusterer::new(self.max_gap,self.max_gap,self.max_gap);
 		
 		//error if output exists. user try to overwrite input or .exe
-		if Path::new(&self.output).exists(){
-			 bail!("Output file '{0}' already exists", self.output);
+		if Path::new(&self.output).exists() && !self.overwrite {
+			bail!("Output file '{0}' already exists", self.output);
 		}
 
 		let max_depth:usize = layers.iter().max_by_key(|layer| layer.max_depth).with_context(|| "No layers ")?.max_depth;

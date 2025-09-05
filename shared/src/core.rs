@@ -17,7 +17,13 @@ pub struct XY {
 */
 
 
+pub fn usize_last_multiple(number:usize , of:usize) -> usize{
+	of*number/of
+}
 
+pub fn usize_next_multiple(number:usize , of:usize) -> usize{
+	usize_last_multiple(number,of) + of
+}
 
 pub fn longitudinal_difference(a: Longitudinal, b: Longitudinal) -> Longitudinal {
 	if a>b{

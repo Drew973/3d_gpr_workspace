@@ -12,6 +12,7 @@ splitting clusters into regions to help with this.
 
 */
 
+pub const GRID_SIZE: usize = 10;
 
 
 #[derive(Debug,Copy,Clone)]
@@ -107,24 +108,48 @@ impl Cuboid{
 }
 
 
-const GRID_SIZE: usize = 10;
-
-//region key from point
-fn region_key(x:usize, y:usize, z:usize) -> (usize,usize,usize){
-	return (x/GRID_SIZE, y/GRID_SIZE, z/GRID_SIZE);
-}
-
 
 /*grid index should work for this.
 simpler than other types and no complicated balancing*/
 #[derive(Debug,Clone)]
 pub struct Region{
-	key: (usize,usize,usize),
-	data_bounds: Cuboid,//bounds of data rather than region itself.
-	data: Vec<XYZV>,
+	pub key: (usize,usize,usize),
+	pub data_bounds: Cuboid,//bounds of data rather than region itself.
+	pub data: Vec<XYZV>,
 }
 
 impl Region{
+	
+	//key from x,y,z coord of point within region
+	pub fn key_from_point(x:usize, y:usize,z:usize) -> (usize,usize,usize) {
+		(x/GRID_SIZE, y/GRID_SIZE, z/GRID_SIZE)
+	}
+	
+	
+	//key for region to right of key
+	pub fn right(key:(usize,usize,usize)) -> (usize,usize,usize){
+		(key.0+1, key.1, key.2)
+	}
+	
+	pub fn min_x(key:(usize,usize,usize)) -> usize{
+		key.0*GRID_SIZE
+	}
+	
+	pub fn min_y(key:(usize,usize,usize)) -> usize{
+		key.1*GRID_SIZE
+	}
+	
+	//key for region above of key
+	pub fn top(key:(usize,usize,usize)) -> (usize,usize,usize){
+		(key.0, key.1+1, key.2)
+	}
+	
+		//key for region above of key
+	pub fn top_right(key:(usize,usize,usize)) -> (usize,usize,usize){
+		(key.0+1, key.1+1, key.2)
+	}
+	
+	
 	
 	fn is_adjacent(&self , point:&XYZV , x_gap:usize , y_gap:usize , z_gap:usize) -> bool{
 		//check bounding Cuboid
@@ -143,8 +168,9 @@ impl Region{
 		let mut points = Vec::with_capacity(GRID_SIZE*GRID_SIZE*GRID_SIZE/10);
 		points.push(p);
 		
-		return Region{key: region_key(p.x, p.y, p.z),
-			data:points,
+		return Region{
+			key: Region::key_from_point(p.x, p.y, p.z),
+			data: points,
 			data_bounds: Cuboid::from_point(p.x, p.y, p.z),
 			};
 	}
@@ -156,9 +182,9 @@ impl Region{
 	}
 	
 	
-	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> impl Iterator<Item = (usize , usize)>{
-		return self.data.iter().filter(move |p| p.z >= min_z && p.z <= max_z).map(|p| (p.x , p.y));
-	}
+//	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> impl Iterator<Item = (usize , usize)>{
+//		return self.data.iter().filter(move |p| p.z >= min_z && p.z <= max_z).map(|p| (p.x , p.y));
+//	}
 	
 	
 	pub fn values_between(&self, min_z:usize ,max_z:usize) -> impl Iterator<Item = Amplitude> {
@@ -173,8 +199,7 @@ impl Region{
 
 }
 
-
-#[derive(Debug,Clone)]
+#[derive(Clone,Debug)]
 pub struct Cluster{
 	pub regions: Vec<Region>,
 	bounds: Cuboid,
@@ -184,7 +209,6 @@ pub struct Cluster{
 
 impl Cluster{
 	
-
 	
 	fn from_point(point:XYZV) -> Cluster {
 		Cluster{regions: vec![Region::from_point(point)],
@@ -192,20 +216,18 @@ impl Cluster{
 		}
 	}
 	
+	
 	fn is_adjacent(&self , point:&XYZV , x_gap:usize , y_gap:usize , z_gap:usize) -> bool{
 		//check bounds of whole cluster.
 		if !self.bounds.buffered(x_gap,y_gap,z_gap).contains(point.x,point.y,point.z){
 			return false;
 		}
-		
 		for region in self.regions.iter(){
 			if region.is_adjacent(point,x_gap,y_gap,z_gap){
 				return true;
 			}
 		}
-		
 		return false;
-		
 	}
 	
 	
@@ -241,32 +263,36 @@ impl Cluster{
 	
 	
 	//mutable reference to region
-	fn get_region(&mut self, key: (usize,usize,usize)) -> Option<&mut Region>{
+	pub fn get_region_mut(&mut self, key:(usize,usize,usize)) -> Option<&mut Region>{
 		self.regions.iter_mut().find(|r| r.key==key)
 	}
+	
+	
+		//mutable reference to region
+	pub fn get_region(&self, key:(usize,usize,usize)) -> Option<&Region>{
+		self.regions.iter().find(|r| r.key == key)
+	}
+	
 	
 	/*only used to merge.
 	add new region or add points to existing.
 	remember to update cluster bounds after this
 	*/
 	fn upsert_region(&mut self, region:Region){
-		if let Some(existing) = self.get_region(region.key){
+		if let Some(existing) = self.get_region_mut(region.key){
 			existing.merge(&region);
 		}
 		else{
 			self.regions.push(region);
 		}
-		
-		
 	}
 	
 	
 	
 	fn add_point(&mut self , point: XYZV){
 		self.bounds.include_point(point.x, point.y, point.z);
-		let key = region_key(point.x,point.y,point.z);
 		
-		if let Some(existing) = self.get_region(key){
+		if let Some(existing) = self.get_region_mut(Region::key_from_point(point.x,point.y,point.z)){
 			existing.add_point(point);
 		}
 		else{
@@ -274,11 +300,11 @@ impl Cluster{
 		}
 	}
 	
-	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> Vec<(usize , usize)>{
-		self.regions.iter().flat_map(|r| r.x_y_between(min_z,max_z)).collect()
+//	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> Vec<(usize , usize)>{
+	//	self.regions.iter().flat_map(|r| r.x_y_between(min_z,max_z)).collect()
 
 	//	return self.points.iter().filter(|p| p.z >= min_z && p.z <= max_z).map(|p| (p.x , p.y)).collect();
-	}
+//	}
 	
 	
 	pub fn values_between(&self , min_z:usize , max_z:usize) -> Vec<Amplitude>{

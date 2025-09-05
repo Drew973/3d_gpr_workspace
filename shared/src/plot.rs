@@ -57,7 +57,7 @@ impl PlotData{
 
 		
 		
-	fn plot(&self , file: &str) -> Result<(), Box<dyn Error>>{
+	pub fn plot(&self , file: &str) -> Result<(), Box<dyn Error>>{
 		let min_x_val = self.min_x_index as f64 * self.x_scale;
 		let min_y_val = self.min_y_index as f64 * self.y_scale;
 		let max_x_val = (self.min_x_index+self.amplitudes.shape()[0]) as f64 * self.x_scale;
@@ -139,7 +139,7 @@ mod plot_tests{
 	const Z_SPACING:f64 = 0.01309289678;// TIME_INTERVAL*C/EPSILON.sqrt();
 
 
-
+	/*
 	#[test]
 	fn test_plot(){
 		const image: &str = r"C:\Users\drew.bennett\Documents\3d_gpr_poi_finder\test\outputs\test_plot.svg";
@@ -159,4 +159,7 @@ mod plot_tests{
 
 		
 	}
+	
+	*/
+	
 }

@@ -4,7 +4,7 @@ use std::io::BufRead;
 use regex::Regex;
 use std::fs::File;
 use anyhow::{Result,anyhow,bail};
-use serde::Serialize;
+use serde::{Serialize,Deserialize};
 //use proj::{Proj, Coord};
 use crate::core::Amplitude;
 
@@ -23,69 +23,69 @@ pub struct XYZ {
 }
  
  
- 
+
+
+#[derive(Debug,Clone)]
+pub struct Trace {
+	pub transverse: usize,
+	pub longitudinal: usize,
+	pub proj_x: f64,
+	pub proj_y: f64 ,
+	pub amplitudes: Vec<Option<Amplitude>>,
+}
+
+
+
+
+
+impl Trace{
 	
-	#[derive(Debug,Clone)]
-	pub struct Trace {
-		pub transverse: usize,
-		pub longitudinal: usize,
-		pub proj_x: f64,
-		pub proj_y: f64 ,
-		pub amplitudes: Vec<Option<Amplitude>>,
+	
+	pub fn new(depth:usize) -> Trace{
+		Trace{proj_x : 0.0 , proj_y : 0.0 , transverse : 0 , longitudinal : 0 , amplitudes : vec![None;depth]}
 	}
-
-
-
-
-
-	impl Trace{
+	
+	
+	
+	
+	pub fn from_line(line: String , transverse:usize , longitudinal:usize , samples:usize) -> Result<Trace> {
 		
+		let mut r = Trace{proj_x : 0.0 , proj_y : 0.0 , transverse : transverse , longitudinal : longitudinal , amplitudes : vec![None; samples]};
 		
-		pub fn new(depth:usize) -> Trace{
-			Trace{proj_x : 0.0 , proj_y : 0.0 , transverse : 0 , longitudinal : 0 , amplitudes : vec![None;depth]}
-		}
-		
-		
-		
-		
-		pub fn from_line(line: String , transverse:usize , longitudinal:usize , samples:usize) -> Result<Trace> {
-			
-			let mut r = Trace{proj_x : 0.0 , proj_y : 0.0 , transverse : transverse , longitudinal : longitudinal , amplitudes : vec![None; samples]};
-			
-			for (i, p) in line.split("\t").enumerate(){
-				match i {
+		for (i, p) in line.split("\t").enumerate(){
+			match i {
+				
+				0 => {
+						r.proj_x = p.parse::<f64>()?;
+					}
 					
-					0 => {
-							r.proj_x = p.parse::<f64>()?;
-						}
-						
-					1 => {
-							r.proj_y = p.parse::<f64>()?;
-						}	
-						
-					_other => {
-						if i <= samples+2{
-							r.amplitudes[i-2] = Some(p.parse::<Amplitude>()?);
-						}
-						else{
-							bail!("Too many columns");
-						}
+				1 => {
+						r.proj_y = p.parse::<f64>()?;
+					}	
+					
+				_other => {
+					if i <= samples+2{
+						r.amplitudes[i-2] = Some(p.parse::<Amplitude>()?);
+					}
+					else{
+						bail!("Too many columns");
 					}
 				}
 			}
-			// middle sensor seems faulty. return trace with valid geom but null amplitudes.
-			if transverse == 12{
-				r.amplitudes = vec![None; samples];
-			}
-			Ok(r)
-		}		
-				
-		
-	}
+		}
+		// middle sensor seems faulty. return trace with valid geom but null amplitudes.
+		if transverse == 12{
+			r.amplitudes = vec![None; samples];
+		}
+		Ok(r)
+	}		
+			
+	
+}
 
 
 
-	//parsing
+//parsing
 
 	//parse line like:
 	//#Volume: X-lines=11019, In-lines=25, Samples=255
@@ -211,11 +211,51 @@ pub struct XYZ {
 	}
 	
 	
+//testing if serde faster than split string. doesn't seem to be.	
+#[derive(Debug,Clone,Deserialize)]
+pub struct RowData {
+	pub proj_x: f64,
+	pub proj_y: f64 ,
+	pub amplitudes: Vec<Option<Amplitude>>,
+}	
+	
+	
+//4.17s	i = 842750
+	
+fn parse_csv_old(f: &str) -> usize{
+	
+	
+
+		let p = TraceParser::new(f).unwrap();
+		
+		
+		let mut i:usize = 0;
+		for result in p {
+			i += 1;
+		}
+		return i;
+}
 	
 	
 	
+//6.39s i= 842756
+
+fn parse_csv_new(f: &str) -> usize{//~8.5ss
+		let p = TraceParser::new(f).unwrap();
+		let mut reader = csv::ReaderBuilder::new()
+		.flexible(true)
+        .has_headers(false)
+		.delimiter(b'\t')
+        .from_path(f)
+		.expect("couldn't create reader");
+		let mut i:usize = 0;
+		for result in reader.deserialize::<RowData>() {
+			i += 1;
+		}
+		return i;
+}	
 	
-	
+
 	
 	
 
@@ -236,9 +276,10 @@ mod trace_tests {
 
 	#[test]
 	fn test_trace_parser(){
-		let f = r"C:\Users\drew.bennett\Documents\3d_gpr_poi_finder\test\M80\11870-05 L1 OS.txt";
-		let p = TraceParser::new(f);
-		//println!("r:{:?}",r);
+		let f = r"C:\Users\drew.bennett\Documents\3d_gpr_poi_finder\test\11820-60\11820-60 L2 C.txt";
+
+		let r = parse_csv_new(f);
+		println!("r:{:?}",r);
 	}
 
 
