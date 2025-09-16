@@ -1,4 +1,4 @@
-import { LineEdit, Button , VerticalBox , SpinBox , Slider , HorizontalBox} from "std-widgets.slint";
+import { LineEdit, Button , VerticalBox , SpinBox , Slider , HorizontalBox, StandardButton, ProgressIndicator} from "std-widgets.slint";
 
 
 export struct XYZ  {
@@ -36,24 +36,26 @@ component LabeledSpinbox{
 	}
 }
 
+component ProgressDialog inherits PopupWindow{
+	in-out property<int> value;
+	changed value => {if value>=0 && value <100 {self.show();} }
+	ProgressIndicator{progress: value;}
+	StandardButton { kind: cancel; }
+}
 
 
 
 
 export component AppWindow inherits Window {
 
-
 	in-out property<string> file:"no file open";
 
 	title: "3D GPR viewer:" + file;
 
-
-
-
 	in-out property<int> data_size_l: 0;
 	in-out property<int> data_size_t: 0;
 	in-out property<int> data_size_d: 0;
-
+	
 	
 	in-out property<int> transverse_pixels: 2000;
 	in-out property<int> transverse_lines: 500;
@@ -94,9 +96,8 @@ export component AppWindow inherits Window {
 		}
 	}
 	
-	
-	
-	
+	in-out property<int> load_progress <=> prog_box.value;
+
 	
 	
 	//can't 2 way bind to struct(2025)
@@ -104,7 +105,10 @@ export component AppWindow inherits Window {
 	GridLayout {
         spacing: 5px;
 	
-	
+		load_progress_dialog := ProgressDialog{value:load_progress;}
+
+		prog_box := SpinBox{value:0;row:3;col:1;}
+
 
 		Rectangle{
 			row:0;

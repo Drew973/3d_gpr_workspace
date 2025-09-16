@@ -4,6 +4,7 @@ use geo::{MultiPoint,Point,ConvexHull,Polygon,CoordsIter,LineString,Coord,MultiP
 use csv::Writer;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::io::{stdout,Write};
 use wkt::ToWkt;
 use crate::core::Amplitude;
 use anyhow::{Result,bail};
@@ -107,7 +108,7 @@ impl PositionData{
 	
 	
 	
-	pub fn geometry_from_cluster(&self , cluster:&Cluster, min_depth:usize , max_depth:usize) -> Result<MultiPolygon<f64>> {
+	pub fn multipolygon_from_cluster(&self , cluster:&Cluster, min_depth:usize , max_depth:usize) -> Result<MultiPolygon<f64>> {
 		let mut polygons:Vec<Polygon> = Vec::with_capacity(cluster.regions.len());
 		for r in cluster.regions.iter(){
 			
@@ -158,18 +159,43 @@ impl PositionData{
 	}
 	
 	
-	pub fn features_from_clusters(&self , clusters:Vec<Cluster> , size_threshold:usize , layers:Vec<Layer>) -> Vec<ClusterFeature> {
+	fn multipoint_from_cluster(&self , cluster:&Cluster, min_depth:usize , max_depth:usize) -> Result<MultiPoint<f64>>{
+		let mut points:Vec<Point> = Vec::new();
+		
+		
+		
+		for r in cluster.regions.iter(){
+			//.filter_map(|p| if p.z >= min_depth && p.z <= max_depth{self.get_point(p.x , p.y )} else {None})
+
+			let mut reg_points:Vec<Point> = r.x_y_between(min_depth,max_depth).iter()
+					.filter_map(|p| self.get_point(p.0 , p.1 ))
+					.collect();
+			points.append(&mut reg_points);
+		}
+		if points.len() == 0 {
+			bail!("no points");
+		}
+		return Ok(MultiPoint::new(points));
+
+
+	}
+	
+	
+	pub fn multipolygon_features_from_clusters(&self , clusters:Vec<Cluster> , size_threshold:usize , layers:Vec<Layer>) -> Vec<ClusterFeature> {
 		let mut features: Vec<ClusterFeature> = Vec::new();
 		let count = clusters.len();
+		//println!("extracting multipolygons from cluster:");	
+		eprint!("\rextracting multipolygons from cluster");
+
+		
 		for (i,cluster) in clusters.iter().enumerate(){
 			if i % 100 == 0{
-				println!("extracting features from cluster {:?} of {:?}" , i , count);			
+				eprint!("\rextracting multipolygons from cluster: {:?} of {:?}" , i , count);
+				//stdout().flush();
 			}
-
-			
 			if cluster.volume() >= size_threshold{
 				for layer in layers.iter(){
-					if let Ok(geom) = self.geometry_from_cluster(cluster,layer.min_depth,layer.max_depth){
+					if let Ok(geom) = self.multipolygon_from_cluster(cluster,layer.min_depth,layer.max_depth){
 						features.push(
 							ClusterFeature{
 								wkt: geom.wkt_string(),
@@ -180,58 +206,41 @@ impl PositionData{
 					}
 				}
 			}
-			
-			if i>100{
-				return features;	
+		}
+		eprint!("\rextracting multipolygons from cluster: done                                         \n");
+
+		return features;
+	}
+	
+	pub fn multipoint_features_from_clusters(&self , clusters:Vec<Cluster> , size_threshold:usize , layers:Vec<Layer>) -> Vec<ClusterFeature> {
+		let mut features: Vec<ClusterFeature> = Vec::new();
+		let count = clusters.len();
+		//println!("extracting multipoints from clusters");			
+		for (i,cluster) in clusters.iter().enumerate(){
+			if i % 100 == 0{
+				println!("extracting multipoints from cluster {:?} of {:?}" , i , count);
+				//stdout().flush();
 			}
-			
-		}
-	
-	return features
-		
-	}
-	
-	
-}
-
-
-
-struct GridArea{
-		min_x:usize,
-		max_x:usize,
-		min_y:usize,
-		max_y:usize,
-		points:Vec<(usize,usize)>
-}
-
-
-/*
-fn gridify(points: Vec<(usize,usize)>, grid_size:usize) -> Vec<GridArea>{
-	min_x = usize_last_multiple(points.iter.min_by_key(|p| p.0),grid_size);
-	max_x = points.iter.max_by_key(|p| p.0);
-	min_y = usize_last_multiple(points.iter.min_by_key(|p| p.1),grid_size);
-	max_y = points.iter.max_by_key(|p| p.1);
-
-	areas: Vec<GridArea> = Vec::new();
-	
-	for x in (min_x..=max_x).step_by(grid_size){
-		for y in (min_y..=max_y).step_by(grid_size){
-			areas.push(GridArea{
-				min_x:x,
-				max_x:x+grid_size,
-				min_y:y,
-				max_y:y+grid_size,
-				points:Vec::new(),
+			if cluster.volume() >= size_threshold{
+				for layer in layers.iter(){
+					if let Ok(geom) = self.multipoint_from_cluster(cluster,layer.min_depth,layer.max_depth){
+						features.push(
+							ClusterFeature{
+								wkt: geom.wkt_string(),
+								depth_band: layer.label.clone(),
+								mean_amplitude: mean(&cluster.values_between(layer.min_depth,layer.max_depth)),
+							}
+						)
+					}
 				}
-			)
+			}
 		}
-
-	}
+		return features;
+	}	
 	
-	//for p in points
-	return areas;
+	
+	
 }
-*/
 
 
 

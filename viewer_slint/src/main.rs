@@ -111,6 +111,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		let mut data = state_copy.borrow_mut();
 		let file:String = select_file();
 		if file.len() > 0{
+			ui_h.set_load_progress(50);
 			let r = AmplitudeData::from_text_file(&file);
 			if r.is_ok(){
 				data.amplitudes = r.unwrap();

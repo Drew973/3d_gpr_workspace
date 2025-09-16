@@ -10,8 +10,8 @@ use shared::core::Amplitude;
 use serde::{Serialize};
 use geo::Point;
 //use serde_json;
+use std::io;
 use anyhow::{Context,bail};
-
 use std::io::{stdin, stdout, Read, Write};
 
 
@@ -24,8 +24,12 @@ fn pause() {
 }
 
 
-
-
+#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize,)]
+enum GeomType {
+	#[default]
+	Multipolygon,
+    Multipoint,
+}
 
 
 //const empty_path:Utf8PathBuf = Utf8PathBuf.from_str("").unwrap();
@@ -34,7 +38,7 @@ fn pause() {
 filters out clusters containing < size-threshold amplitudes. 
 for depth ranges (0-50mm...450-500mm) gets geometry from parts of clusters within range.
 Outputs csv with WKT geometry and label for depth range.
-Also outputs points csv to [input]_points.csv
+Also outputs all points to csv to [input]_points.csv
 
 The tool makes a list of clusters (a cluster is a group of connected samples) from all samples >= amplitude threshold.
 Samples count as connected when their x and y and z coordinates are within max_gap (5 sample units) of each other.
@@ -52,7 +56,8 @@ Parameters:
 	Points considered connected if x,y and z within max_gap sample units of each other.
 	--size-threshold: Integer >=0 .Ignore clusters containing < size-threshold samples.
 	--pause: pause after running.
-"
+	--geom-type: type of geometry to export as. multipoint or multipolygon.
+	"
 )]
 #[derive(Debug , Parser , Serialize)]
 struct Args {
@@ -65,6 +70,9 @@ struct Args {
 	#[arg(long, default_value_t = String::from(""))]
     output_params: String,
 	//output_params: Option<Utf8PathBuf>,
+	
+	#[clap(short, long, default_value_t, value_enum)]
+    geom_type: GeomType,
 	
 	#[arg(long, default_value_t = 10000)]
     amplitude_threshold: Amplitude,
@@ -132,11 +140,21 @@ impl Args{
 		let mut positions = PositionData::new(parser.x_lines , parser.in_lines);
 		
 		let total:f32 = std::cmp::min(parser.x_lines,MAX_LINES) as f32 * parser.in_lines as f32;
+		let interval:usize = 5000;
+		//let total:usize = std::cmp::min(parser.x_lines,MAX_LINES) * parser.in_lines/interval;
 		
+		eprint!("Reading input and clustering:");			
+		//let mut pb = ProgressBar::new(total as u64);
+
 		for (i,t) in parser.enumerate(){
-			if i % 5000 ==0 {
-				println!("Reading input and clustering:{:.2?}%",100.0 * i as f32 / total);			
+			if i % interval ==0 {
+				eprint!("\rReading input and clustering:{:.2?}%",100.0 * i as f32 / total);
+				let _ = io::stdout().flush();
+				//pb.inc();				
 			}
+			
+			
+			
 			if let Ok(tc) = t{
 				positions.add_point(tc.longitudinal,tc.transverse , Point::new(tc.proj_x,tc.proj_y));
 				
@@ -151,12 +169,27 @@ impl Args{
 				}
 			}
 		}
+		eprint!("\rReading input and clustering: Done                \n");
 
 
-		let _ = ClusterFeature::write_csv(
-			positions.features_from_clusters(clusterer.clusters(),self.size_threshold.into(),layers)
-			,&self.output
-		);
+		//pb.finish_print("done Reading input and clustering              ");
+
+
+
+		let _ = match self.geom_type{
+			GeomType::Multipolygon => ClusterFeature::write_csv(
+				positions.multipolygon_features_from_clusters(clusterer.clusters(),self.size_threshold.into(),layers)
+				,&self.output
+			),
+			
+			GeomType::Multipoint => ClusterFeature::write_csv(
+				positions.multipoint_features_from_clusters(clusterer.clusters(), self.size_threshold.into(), layers)
+				,&self.output
+				)
+			
+		};
+
+
 
 		//write points to csv
 		let input = Path::new(&self.input);
@@ -164,7 +197,7 @@ impl Args{
 		let geom_csv = input.with_file_name(file_name).with_extension("csv");
 		let points_write_result = positions.write_csv(Path::new(&geom_csv));
 		if points_write_result.is_err(){
-			println!("Error writing points csv:{:?}. Continuing",points_write_result);			
+			println!("Error writing points csv:{:?}. Continuing", points_write_result);			
 		}
 		
 		//write params to json

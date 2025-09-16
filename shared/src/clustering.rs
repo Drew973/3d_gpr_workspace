@@ -1,5 +1,8 @@
 use crate::core::{Amplitude,usize_dif,usize_subtract};
 use std::cmp::{min,max};
+use std::collections::HashSet;
+
+
 /*
 clustering algorithm for voxels.
 
@@ -185,6 +188,13 @@ impl Region{
 //	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> impl Iterator<Item = (usize , usize)>{
 //		return self.data.iter().filter(move |p| p.z >= min_z && p.z <= max_z).map(|p| (p.x , p.y));
 //	}
+
+
+	//hashset for unique values
+	pub fn x_y_between(&self, min_z: usize, max_z: usize) -> HashSet<(usize , usize)>{
+		return self.data.iter().filter(move |p| p.z >= min_z && p.z <= max_z).map(|p| (p.x , p.y)).collect();
+	}
+	
 	
 	
 	pub fn values_between(&self, min_z:usize ,max_z:usize) -> impl Iterator<Item = Amplitude> {

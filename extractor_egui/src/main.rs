@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::process::{Command};
 
 
-const EXE:&str = "cli.exe";
+const EXE:&str = "extract_high_amplitudes.exe";
 
 
 
@@ -61,6 +61,39 @@ struct MyApp {
 	max_gap: usize,
 }
 
+
+
+impl MyApp{
+	
+	fn start_subprocess(&self) {
+		let mut path = env::current_dir().unwrap_or(PathBuf::from(EXE));
+		path.push(EXE);
+		
+		let mut binding = Command::new(&path);
+		let c = binding
+			.arg("--input").arg(&self.input_file)
+			.arg("--output").arg(&self.output_file)
+			.arg("--amplitude-threshold").arg(format!("{0}",self.amplitude_threshold))
+			.arg("--max-gap").arg(format!("{0}",self.max_gap))
+			.arg("--size-threshold").arg(format!("{0}",self.size_threshold))
+			.arg("--overwrite")
+			.arg("--pause");		
+		let _ = c.spawn();
+	}
+	
+	
+	fn display_command(&self) -> String{
+		let mut path = env::current_dir().unwrap_or(PathBuf::from(EXE));
+		path.push(EXE);
+		format!("{:?} --input {:?} --output {:?} --amplitude-threshold {:?} --max-gap {:?} --size-threshold {:?} --overwrite --pause"
+		, path, self.input_file, self.output_file, self.amplitude_threshold, self.max_gap, self.size_threshold)
+	}
+	
+	
+}
+
+
+
 // Default state for the application
 impl Default for MyApp {
     fn default() -> Self {
@@ -100,33 +133,18 @@ impl eframe::App for MyApp {
 			ui.add(egui::Slider::new(&mut self.max_gap, 1..=50).text("Maximum gap for clustering. Larger means clusters more likely to merge."));
 			ui.add(egui::Slider::new(&mut self.size_threshold, 0..=1000).text("Output clusters with > this many samples"));
 		
-			let mut path = env::current_dir().unwrap_or(PathBuf::from(EXE));
-			path.push(EXE);
+
 			
 			ui.add(egui::Label::new("Command:"));
 
-		
-			let command = format!("\"{}\" --input \"{}\" --output \"{}\" --amplitude-threshold {} --size-threshold {} --max-gap {} --pause" ,
-			path.display(),
-			self.input_file ,
-			self.output_file,
-			self.amplitude_threshold,
-			self.size_threshold,
-			self.max_gap,
-			);
-			ui.add(egui::Label::new(&command));
-			
-			if ui.button("Run (open new terminal)").clicked() {
-				//self.progress = Some(0.0);
-				//start_task();
-				//open_terminal(&command);
-				
-				//let p = Popen::create(&[path.display(),self.input_file.into(),self.output_file.into()],PopenConfig::default());
-				let child = Command::new(&path).arg("--input").arg(&self.input_file).arg("--output").arg(&self.output_file).arg("--pause").spawn();
-				println!("path:{:?}",&path);
+			//let mut child = self.get_command();
 
-				println!("child:{:?}",child);
-				
+			ui.add(egui::Label::new(self.display_command()));
+
+		//	ui.add(egui::Label::new(format!("{:?}",child)));
+
+			if ui.button("Run (open new terminal)").clicked() {
+				self.start_subprocess();
 			}
 			
 			
@@ -134,7 +152,6 @@ impl eframe::App for MyApp {
         });
     }
 }
-
 
 
 
